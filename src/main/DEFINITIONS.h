@@ -13,5 +13,4 @@ const byte SAMPLES_PER_SERIAL_SAMPLE = 10;
 struct DHTData {
   int humidity;
   float temp_c;
-  float temp_f;
 };

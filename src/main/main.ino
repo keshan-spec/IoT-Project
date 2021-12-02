@@ -6,13 +6,12 @@
 
 // header files
 #include "DEFINITIONS.h"
-#include "HeartPulseSensor.h"
-#include "SensorData.h"
 #include "LoRaHelper.h"
 
 dht DHT; // Initialize DHT sensor for normal 16mhz Arduino
 PulseSensorPlayground pulseSensor;
-int bpm = 0;
+
+int bpm, humidity, temp_c;
 
 void setup() {
   //Initialize serial and wait for port to open:
@@ -20,9 +19,27 @@ void setup() {
   // wait for serial port to connect. Needed for native USB port only
   while (!Serial);
 
-  initPulseSensor(); // Initialize the pulse sensor module
-  startSender(); // Begin LoRa Broadcasting
-  //  Serial.println("bpm,temp_c,temp_f,humidity");
+  // Initialize the pulse sensor module
+  // Configure the PulseSensor manager.
+  pulseSensor.analogInput(PULSE_INPUT);
+  pulseSensor.blinkOnPulse(PULSE_BLINK);
+  pulseSensor.setThreshold(THRESHOLD);
+
+  // Skip the first SAMPLES_PER_SERIAL_SAMPLE in the loop().
+  samplesUntilReport = SAMPLES_PER_SERIAL_SAMPLE;
+
+  // Now that everything is ready, start reading the PulseSensor signal.
+  if (!pulseSensor.begin()) {
+    Serial.println("Unable to start pulse sensor");
+  }
+
+  // Begin LoRa Broadcasting
+  if (!LoRa.begin(915E6)) {
+    Serial.println("Starting LoRa failed!");
+    while (1);
+  }
+
+  Serial.println("Sender/Slave Node Status: [ACTIVE]\n\n");
 }
 
 void loop() {
@@ -32,20 +49,27 @@ void loop() {
       samplesUntilReport = SAMPLES_PER_SERIAL_SAMPLE;
       if (pulseSensor.sawStartOfBeat()) {
         bpm = pulseSensor.getBeatsPerMinute();
-        Serial.println("BPM : " + String(bpm));
+        //Serial.print("BPM : " + String(bpm));
 
         // display temperature
         // Wait a few seconds between measurements.
         delay(20);
-        struct DHTData dhtdata = getDHTSensorData();
-        if (!isnan(dhtdata.temp_c)) {
-          Serial.println("Humidity: " + String(dhtdata.humidity) + "%\tTemp C: " + String(dhtdata.temp_c) + "\tTemp F: " + String(dhtdata.temp_f));
+        DHT.read11(DHTPIN);
+
+        // Reading temperature or humidity takes about 250 milliseconds!
+        // Sensor readings may also be up to 2 seconds 'old' (its a very slow sensor)
+        humidity = DHT.humidity;
+        // Read temperature as Celsius
+        temp_c = DHT.temperature;
+
+        // Check if any reads failed and exit early (to try again).
+        if (isnan(humidity) || isnan(temp_c)) {
+          Serial.println("Failed to read from DHT sensor!");
         }
-        //        Serial.println(String(bpm)+","+String(dhtdata.temp_c)+","+String(dhtdata.temp_f)+","+String(dhtdata.humidity)+"");
+
         // broadcast bpm and dht data to LoRa node
-        sendPacket(bpm, dhtdata);
+        sendPacket(bpm, humidity, temp_c);
       }
     }
   }
-
 }
