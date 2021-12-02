@@ -1,3 +1,9 @@
+/*
+  Every Sketch that uses the PulseSensor Playground must
+  define USE_ARDUINO_INTERRUPTS before including PulseSensorPlayground.h.
+  Here, #define USE_ARDUINO_INTERRUPTS false tells the library to
+  not use interrupts to read data from the PulseSensor.
+*/
 #define USE_ARDUINO_INTERRUPTS false
 #include <PulseSensorPlayground.h>
 #include "dht.h"
@@ -6,12 +12,30 @@
 
 // header files
 #include "DEFINITIONS.h"
-#include "LoRaHelper.h"
 
 dht DHT; // Initialize DHT sensor for normal 16mhz Arduino
-PulseSensorPlayground pulseSensor;
+PulseSensorPlayground pulseSensor; // Initialize the pulse sensor module
 
-int bpm, humidity, temp_c;
+void sendPacket(int bpm, int humidity, float temp_c) {
+  Serial.print("Sending packet: ");
+  Serial.print("BPM : " + String(bpm) + " | Temp C: ");
+  Serial.print(String(temp_c) + ", Humidity: ");
+  Serial.println(String(humidity) + "%");
+
+  // send packet
+  LoRa.beginPacket();
+  /*
+    Safety measure to make sure all writes are received,
+    On the receiving node, a lenght check will determine if
+    every byte is received.
+  */
+  String outgoing = String(bpm) + String(humidity) + String(temp_c);
+  LoRa.write(outgoing.length());
+  LoRa.write(bpm);
+  LoRa.write(humidity);
+  LoRa.write(temp_c);
+  LoRa.endPacket();
+}
 
 void setup() {
   //Initialize serial and wait for port to open:
@@ -19,7 +43,6 @@ void setup() {
   // wait for serial port to connect. Needed for native USB port only
   while (!Serial);
 
-  // Initialize the pulse sensor module
   // Configure the PulseSensor manager.
   pulseSensor.analogInput(PULSE_INPUT);
   pulseSensor.blinkOnPulse(PULSE_BLINK);
@@ -43,13 +66,15 @@ void setup() {
 }
 
 void loop() {
-  // Display heart rate
+  /*NOTE: if US_PS_INTERRUPTS is false, your Sketch must
+    call pulse.sawNewSample() at least once every 2 milliseconds
+    to accurately read the PulseSensor signal.
+  */
   if (pulseSensor.sawNewSample()) {
     if (--samplesUntilReport == (byte) 0) {
       samplesUntilReport = SAMPLES_PER_SERIAL_SAMPLE;
       if (pulseSensor.sawStartOfBeat()) {
         bpm = pulseSensor.getBeatsPerMinute();
-        //Serial.print("BPM : " + String(bpm));
 
         // display temperature
         // Wait a few seconds between measurements.
@@ -57,7 +82,6 @@ void loop() {
         DHT.read11(DHTPIN);
 
         // Reading temperature or humidity takes about 250 milliseconds!
-        // Sensor readings may also be up to 2 seconds 'old' (its a very slow sensor)
         humidity = DHT.humidity;
         // Read temperature as Celsius
         temp_c = DHT.temperature;
