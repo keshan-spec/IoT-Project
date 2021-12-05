@@ -14,7 +14,7 @@ WiFiClient  client;
 int bpm, humidity, incomingLen;
 float temp_c;
 String incoming;
-unsigned long WRITE_INTERVAL = 5 * 1000; // seconds in ms
+unsigned long WRITE_INTERVAL = 16 * 1000; // seconds in ms
 unsigned long ms, timer, delta;
 
 void setup() {
@@ -32,10 +32,27 @@ void setup() {
   Serial.println("LoRa Status: [MASTER NODE RUNNING]");
 }
 
+void alert() {
+  tone(8, 2000); // buzzer
+  digitalWrite(11, HIGH);
+  delay(300);
+
+  noTone(8);
+  digitalWrite(11, LOW);
+  delay(300);
+
+  tone(8, 2000); // buzzer
+  digitalWrite(11, HIGH);
+  delay(300);
+
+  noTone(8);
+  digitalWrite(11, LOW);
+}
+
 void loop() {
   ms = micros();
 
-  // write to thingspeak after 15 seconds interval
+  // write to thingspeak after WRITE_INTERVAL
   if (delta > WRITE_INTERVAL) {
     delta = 0; timer = 0; // reset timer
     digitalWrite(13, HIGH);
@@ -43,11 +60,13 @@ void loop() {
 
     // upload to thingspeak
     ThingSpeak.setField(1, bpm);
+    ThingSpeak.setField(2, temp_c); // celsuis
+    //    ThingSpeak.setField(3, temp_c * 1.8 + 32); // fahrenhite
     ThingSpeak.setField(4, humidity);
-    ThingSpeak.setField(2, temp_c);
 
     int x = ThingSpeak.writeFields(CHANNEL_NO, WRITE_API_KEY);
-    if (x != 200) Serial.println("Problem updating channel. HTTP error code " + String(x));
+    if (x == 200) Serial.println("Channel Updated");
+    else Serial.println("Problem updating channel. HTTP error code " + String(x));
     // finish uploading
 
     delay(1000);
@@ -70,12 +89,16 @@ void loop() {
     return;
   }
 
-  Serial.print("BPM " + String(bpm));
-  Serial.print("\tHumidity " + String(humidity));
-  Serial.println("\tTemperature " + String(temp_c));
+  if (bpm >= 200) {
+    alert();
+  }
+  //  Serial.print("BPM " + String(bpm));
+  //  Serial.print("\tHumidity " + String(humidity));
+  //  Serial.println("%\tTemperature " + String(temp_c));
+
 
   // total time that took for loop - start time of loop
+  delay(20);
   timer = (micros() - ms) / 1000;
   delta += timer;
-  delay(20);
 }

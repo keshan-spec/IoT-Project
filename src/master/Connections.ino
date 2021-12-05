@@ -6,10 +6,13 @@ void connectToWiFi() {
     while (true);
   }
 
+  Serial.print("Attempting to connect to WPA SSID: ");
+  Serial.println(ssid);
+
   // attempt to connect to WiFi network:
   while (status != WL_CONNECTED) {
-    Serial.print("Attempting to connect to WPA SSID: ");
-    Serial.println(ssid);
+    Serial.print(".");
+
     // Connect to WPA/WPA2 network:
     status = WiFi.begin(ssid, pass);
 
