@@ -14,4 +14,4 @@ All source code is avaialable in the ``src/`` folder. All secrets (WIFI Credenti
 
 ## Sensor Libraries
 - PulseSensorPlayground
-- DHT Sensor library ``(https://www.brainy-bits.com/post/how-to-use-the-dht11-temperature-and-humidity-sensor-with-an-arduino)``
+- DHT Sensor library ````(https://www.brainy-bits.com/post/how-to-use-the-dht11-temperature-and-humidity-sensor-with-an-arduino)````
