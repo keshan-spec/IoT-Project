@@ -11,7 +11,7 @@ char pass[] = SECRET_PASS;       // your network password (use for WPA, or use a
 int status = WL_IDLE_STATUS;     // the WiFi radio's status
 WiFiClient  client;
 
-int bpm, humidity, incomingLen;
+int bpm, humidity, incomingLen, heat_index;
 float temp_c;
 String incoming;
 unsigned long WRITE_INTERVAL = 16 * 1000; // seconds in ms
@@ -60,8 +60,8 @@ void loop() {
 
     // upload to thingspeak
     ThingSpeak.setField(1, bpm);
-    ThingSpeak.setField(2, temp_c); // celsuis
-    //    ThingSpeak.setField(3, temp_c * 1.8 + 32); // fahrenhite
+    ThingSpeak.setField(2, temp_c);
+    ThingSpeak.setField(3, heat_index);
     ThingSpeak.setField(4, humidity);
 
     int x = ThingSpeak.writeFields(CHANNEL_NO, WRITE_API_KEY);
@@ -82,8 +82,9 @@ void loop() {
   bpm = LoRa.read();
   humidity = LoRa.read();
   temp_c = LoRa.read();
+  heat_index = LoRa.read();
 
-  incoming = String(bpm) + String(humidity) + String(temp_c);
+  incoming = String(bpm) + String(humidity) + String(temp_c) + String(heat_index);
   if (incoming.length() != incomingLen) {
     Serial.println("Error, packets not received fully!");
     return;
@@ -92,9 +93,10 @@ void loop() {
   if (bpm >= 200) {
     alert();
   }
-  //  Serial.print("BPM " + String(bpm));
-  //  Serial.print("\tHumidity " + String(humidity));
-  //  Serial.println("%\tTemperature " + String(temp_c));
+  
+  Serial.print("BPM " + String(bpm));
+  Serial.print("\tHeat Index " + String(heat_index));
+  Serial.println("%\tTemperature " + String(temp_c));
 
 
   // total time that took for loop - start time of loop
