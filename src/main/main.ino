@@ -10,12 +10,13 @@
 #include <SPI.h>
 #include <LoRa.h>
 
-// header files
+// header file
 #include "DEFINITIONS.h"
 
 dht DHT; // Initialize DHT sensor for normal 16mhz Arduino
 PulseSensorPlayground pulseSensor; // Initialize the pulse sensor module
 
+// calculates heat index from humidity and temperature
 int calculateHeatIndex() {
   int hi = 0.5 * (temp_c + 61.0 + ((temp_c - 68.0) * 1.2) + (humidity * 0.094));
 
@@ -39,12 +40,13 @@ int calculateHeatIndex() {
   return hi;
 }
 
+// broadcasts sensor data
 void sendPacket(int bpm, int humidity, float temp_c, int heat_index) {
   Serial.print("Sending packet: ");
   Serial.print("BPM : " + String(bpm) + " | Temp C: ");
   Serial.print(String(temp_c) + ", Humidity: ");
   Serial.print(String(humidity) + "%");
-  Serial.print(String(temp_c) + ", Heat index: ");
+  Serial.print(", Heat index: ");
   Serial.println(String(heat_index) + "%");
 
   // send packet
@@ -96,13 +98,12 @@ void loop() {
     call pulse.sawNewSample() at least once every 2 milliseconds
     to accurately read the PulseSensor signal.
   */
-  if (pulseSensor.sawNewSample()) {
+  if (pulseSensor.sawNewSample()) { // get new sample from sensor
     if (--samplesUntilReport == (byte) 0) {
       samplesUntilReport = SAMPLES_PER_SERIAL_SAMPLE;
-      if (pulseSensor.sawStartOfBeat()) {
-        bpm = pulseSensor.getBeatsPerMinute();
+      if (pulseSensor.sawStartOfBeat()) { // if a beat is found
+        bpm = pulseSensor.getBeatsPerMinute(); // store the BPM in the bpm variable
 
-        // display temperature
         // Wait a few seconds between measurements.
         delay(20);
         DHT.read11(DHTPIN);
@@ -117,7 +118,8 @@ void loop() {
           Serial.println("Failed to read from DHT sensor!");
         }
 
-        int heat_index = calculateHeatIndex();
+        int heat_index = calculateHeatIndex(); // get heat index
+        
         // broadcast bpm and dht data to LoRa node
         sendPacket(bpm, humidity, temp_c, heat_index);
       }
